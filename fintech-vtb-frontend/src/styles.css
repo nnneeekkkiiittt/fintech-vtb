@@ -103,7 +103,11 @@ h1, h2, h3, p { margin-top: 0; }
 .allocation-pill span { color: #7c9cc0; font-size: 9px; font-weight: 550; margin-left: 2px; }
 .envelope-name { display: block; color: #1b2b47; font-size: 14px; font-weight: 750; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .envelope-category { color: #9aa6b7; font-size: 11px; margin-bottom: 20px; }
-.envelope-amount { font-size: 22px; letter-spacing: -.7px; font-variant-numeric: tabular-nums; margin-top: auto; margin-bottom: 15px; white-space: nowrap; }
+/*.envelope-amount { font-size: 22px; letter-spacing: -.7px; font-variant-numeric: tabular-nums; margin-top: auto; margin-bottom: 15px; white-space: nowrap; }*/
+.envelope-amount-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: auto; margin-bottom: 15px; }
+.envelope-amount { font-size: 22px; letter-spacing: -.7px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.envelope-extra { font-size: 13px; font-weight: 700; color: #0875e5; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 .envelope-card-foot { padding-top: 12px; border-top: 1px solid #eff3f7; display: flex; align-items: center; justify-content: space-between; color: #9ba8b8; font-size: 10px; }
 .envelope-card-foot svg { color: #9eafc4; }
 .more-envelope-card { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; border: 1px dashed #cbd9e9; border-radius: 18px; background: rgba(255,255,255,.55); color: #8b9bb0; min-height: 230px; }
@@ -372,11 +376,16 @@ h1, h2, h3, p { margin-top: 0; }
   .envelope-card-top { margin-bottom: 13px; align-items: flex-start; }
   .envelope-icon-box { width: 39px; height: 39px; border-radius: 13px; }
   .envelope-icon-box svg { width: 19px; height: 19px; }
+
+  .envelope-amount-row { margin-bottom: 12px; flex-wrap: wrap; }
+  .envelope-amount { font-size: clamp(16px, 4.8vw, 20px); letter-spacing: -.55px; }
+  .envelope-extra { font-size: 11px; }
+
   .allocation-pill { font-size: 10px; padding: 5px 6px; }
   .allocation-pill span { display: none; }
   .envelope-name { font-size: 12px; margin-bottom: 4px; }
   .envelope-category { font-size: 9px; margin-bottom: 17px; min-height: 11px; }
-  .envelope-amount { font-size: clamp(16px, 4.8vw, 20px); letter-spacing: -.55px; margin-bottom: 12px; }
+ /* .envelope-amount { font-size: clamp(16px, 4.8vw, 20px); letter-spacing: -.55px; margin-bottom: 12px; }*/
   .envelope-card-foot { padding-top: 10px; font-size: 9px; }
   .envelope-card-foot svg { width: 14px; }
   .more-envelope-card { min-height: 190px; border-radius: 15px; }
