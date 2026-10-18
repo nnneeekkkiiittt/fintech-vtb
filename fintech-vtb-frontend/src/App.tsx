@@ -463,20 +463,7 @@ function QuickAction({ icon, label, tone, onClick }: { icon: ReactNode; label: s
 
 
 
-// Временные значения, пока нет формулы
-const TEMP_METRICS: Record<number, number> = { 1: 667, 2: 668, 3: 669 };
 
-function calcEnvelopeMetric(envelope: Envelope): number {
-  // TODO: заменить на формулу
-  return TEMP_METRICS[envelope.id] ?? 0;
-}
-/*
-function calcEnvelopeMetric(envelope: Envelope): number {
-  return envelope.allocation_percent * 2;   // пример
-}
-
- ####### КОГДА ПРИДЕТ ФОРМУЛА########
-*/
 
 function EnvelopeCard({ envelope, index, onClick }: { envelope: Envelope; index: number; onClick: () => void }) {
   const color = `envelope-color-${index % 4}`;
@@ -486,7 +473,7 @@ function EnvelopeCard({ envelope, index, onClick }: { envelope: Envelope; index:
       <span className="envelope-name">{envelope.name}</span><span className="envelope-category">{envelope.category}</span>
       <div className="envelope-amount-row">
         <strong className="envelope-amount">{money(rubles(envelope.balance_kopecks))}</strong>
-        <span className="envelope-extra">{calcEnvelopeMetric(envelope)}</span>
+        <span className="envelope-extra">{money(rubles(envelope.daily_balance))}</span>
       </div>
       <div className="envelope-card-foot"><span>Баланс конверта</span><ChevronRight size={16} /></div>
     </button>
