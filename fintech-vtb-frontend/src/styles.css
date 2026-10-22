@@ -47,6 +47,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .mode-live .mode-dot { background: #21b77a; box-shadow: 0 0 0 3px #e1f8ed; }
 .profile-button { width: 37px; height: 37px; border: 0; padding: 0; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(135deg, #e5efff, #c8deff); color: #0758bf; font-weight: 700; }
 .profile-button span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; background: #fff; font-size: 13px; }
+.notifications { position: relative; }
+.notifications-button { width: 37px; height: 37px; display: grid; place-items: center; border: 1px solid #e3eaf4; border-radius: 50%; background: #f8faff; color: #667b99; padding: 0; transition: .16s ease; }
+.notifications-button:hover { color: #096fd4; border-color: #b9d5f5; background: #f2f8ff; }
+.notifications-panel { position: absolute; top: calc(100% + 12px); right: 0; width: min(280px, calc(100vw - 34px)); padding: 16px; border: 1px solid #e8edf4; border-radius: 16px; background: #fff; box-shadow: 0 18px 45px rgba(7, 32, 70, .18); z-index: 30; animation: rise-in .18s ease-out; }
+.notifications-title { margin-bottom: 8px; font-size: 14px; font-weight: 800; color: var(--vtb-navy); }
+.notifications-empty { margin: 0 0 12px; font-size: 13px; color: #8796ad; }
+.notifications-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--vtb-blue); text-decoration: none; }
+.notifications-link.disabled { color: #a9b6c8; font-weight: 600; }
 
 .main-content { width: min(1180px, calc(100% - 56px)); flex: 1; margin: 0 auto; padding: 36px 0 48px; }
 .page-heading { margin-bottom: 27px; display: flex; align-items: end; justify-content: space-between; gap: 18px; }
