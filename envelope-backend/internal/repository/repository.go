@@ -14,6 +14,7 @@ type Repository interface {
 	UpdateEnvelope(ctx context.Context, id int64, name, category string) (domain.Envelope, error)
 	DeleteEnvelope(ctx context.Context, id int64) error
 	SetAllocations(ctx context.Context, updates []domain.AllocationUpdate) ([]domain.Envelope, error)
+	ApplyRecommendation(ctx context.Context, items []domain.RecommendedEnvelope) ([]domain.Envelope, error)
 	CreateIncome(ctx context.Context, amountKopecks int64, description string) (domain.Transaction, error)
 	CreateExpense(ctx context.Context, envelopeID, amountKopecks int64, description string) (domain.Transaction, error)
 	ListTransactions(ctx context.Context, limit, offset int) ([]domain.Transaction, error)

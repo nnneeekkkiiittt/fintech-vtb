@@ -68,5 +68,9 @@ func SplitIncome(amountKopecks int64, envelopes []Envelope) ([]IncomeShare, erro
 }
 
 func CalculateDailyBalance(envelope Envelope) (int64, error) {
+	// rand.Int63n паникует при n <= 0, а у нового конверта баланс нулевой.
+	if envelope.BalanceKopecks <= 0 {
+		return 0, nil
+	}
 	return rand.Int63n(envelope.BalanceKopecks), nil
 }

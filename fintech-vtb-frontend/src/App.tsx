@@ -1,19 +1,18 @@
-import { useCallback, useEffect, useMemo,useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowDownToLine,
   ArrowDownLeft,
   ArrowRight,
   ArrowUpFromLine,
   BadgeCheck,
-  Bell,
   Car,
   Check,
   ChevronRight,
   CircleHelp,
+  ClipboardList,
   Clock3,
   Eye,
   EyeOff,
-  ExternalLink,
   FileText,
   Gift,
   History as HistoryIcon,
@@ -43,6 +42,7 @@ import {
   START_IN_DEMO_MODE,
   updateEnvelope,
 } from './lib/api';
+import { QuestionnaireFlow } from './Questionnaire';
 import type { AllocationUpdate, Envelope, Transaction } from './lib/types';
 
 type Page = 'home' | 'envelopes' | 'history';
@@ -50,6 +50,7 @@ type ModalState =
   | { kind: 'income' }
   | { kind: 'expense'; envelopeId?: number }
   | { kind: 'create-envelope' }
+  | { kind: 'questionnaire' }
   | { kind: 'edit-envelope'; envelope: Envelope };
 type TransactionFilter = 'all' | 'income' | 'expense';
 
@@ -264,7 +265,6 @@ function App() {
               {useMock ? 'Демо-режим' : 'Реальный API'}
               <RefreshCw size={13} />
             </button>
-            <NotificationsMenu />
             <button className="profile-button" aria-label="Профиль"><span>Н</span></button>
           </div>
         </div>
@@ -301,6 +301,7 @@ function App() {
                 onIncome={() => setModal({ kind: 'income' })}
                 onExpense={() => setModal({ kind: 'expense' })}
                 onCreate={() => setModal({ kind: 'create-envelope' })}
+                onQuestionnaire={() => setModal({ kind: 'questionnaire' })}
                 onAllocations={() => { setPage('envelopes'); setAllocationsOpen(true); }}
                 onAllEnvelopes={() => setPage('envelopes')}
                 onAllTransactions={() => setPage('history')}
@@ -361,6 +362,13 @@ function App() {
               onSubmit={handleTransactionSubmit}
             />
           )}
+          {modal.kind === 'questionnaire' && (
+            <QuestionnaireFlow
+              useMock={useMock}
+              onClose={() => setModal(null)}
+              onApplied={async (message) => { setModal(null); await reloadAndNotify(message); }}
+            />
+          )}
           {(modal.kind === 'create-envelope' || modal.kind === 'edit-envelope') && (
             <EnvelopeForm
               editing={modal.kind === 'edit-envelope' ? modal.envelope : undefined}
@@ -391,7 +399,7 @@ function BottomNavigation({ page, onNavigate }: { page: Page; onNavigate: (page:
 }
 
 function HomePage({
-  envelopes, transactions, totalKopecks, balanceVisible, onToggleBalance, onIncome, onExpense, onCreate, onAllocations, onAllEnvelopes, onAllTransactions, onSelectEnvelope,
+  envelopes, transactions, totalKopecks, balanceVisible, onToggleBalance, onIncome, onExpense, onCreate, onQuestionnaire, onAllocations, onAllEnvelopes, onAllTransactions, onSelectEnvelope,
 }: {
   envelopes: Envelope[];
   transactions: Transaction[];
@@ -401,6 +409,7 @@ function HomePage({
   onIncome: () => void;
   onExpense: () => void;
   onCreate: () => void;
+  onQuestionnaire: () => void;
   onAllocations: () => void;
   onAllEnvelopes: () => void;
   onAllTransactions: () => void;
@@ -422,6 +431,12 @@ function HomePage({
         <QuickAction icon={<ArrowUpFromLine size={22} />} label="Потратить" tone="purple" onClick={onExpense} />
         <QuickAction icon={<Plus size={23} />} label="Новый конверт" tone="mint" onClick={onCreate} />
         <QuickAction icon={<SlidersHorizontal size={22} />} label="Распределение" tone="orange" onClick={onAllocations} />
+      </section>
+
+      <section className="questionnaire-banner" aria-label="Подбор конвертов">
+        <span className="questionnaire-banner-icon"><ClipboardList size={22} /></span>
+        <div><strong>Подберём конверты под вас</strong><p>15 коротких вопросов, и мы предложим категории и доли распределения.</p></div>
+        <button className="button button-primary" onClick={onQuestionnaire}>Пройти анкету <ArrowRight size={16} /></button>
       </section>
 
       <section className="section-block">
@@ -461,50 +476,8 @@ function QuickAction({ icon, label, tone, onClick }: { icon: ReactNode; label: s
   return <button className="quick-action" onClick={onClick}><span className={`quick-action-icon tone-${tone}`}>{icon}</span><span>{label}</span></button>;
 }
 
-// Ссылка на Google-форму. Когда форма будет готова, вставь сюда адрес.
-const NOTIFICATIONS_FORM_URL = '';
-
-function NotificationsMenu() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  return (
-    <div className="notifications" ref={ref}>
-      <button className="notifications-button" onClick={() => setOpen((value) => !value)} aria-label="Уведомления" aria-expanded={open}>
-        <Bell size={19} />
-      </button>
-      {open && (
-        <div className="notifications-panel" role="dialog" aria-label="Уведомления">
-          <div className="notifications-title">Уведомления</div>
-          <p className="notifications-empty">Новых уведомлений пока нет</p>
-          {NOTIFICATIONS_FORM_URL ? (
-            <a className="notifications-link" href={NOTIFICATIONS_FORM_URL} target="_blank" rel="noreferrer">
-              Открыть форму <ExternalLink size={14} />
-            </a>
-          ) : (
-            <span className="notifications-link disabled">Здесь будет ссылка на форму</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+// Число в правом нижнем углу карточки конверта.
+// Сейчас постоянное значение, позже здесь будет формула.
 
 
 

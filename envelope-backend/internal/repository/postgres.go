@@ -197,6 +197,106 @@ func (p *Postgres) SetAllocations(ctx context.Context, updates []domain.Allocati
 	return p.ListEnvelopes(ctx)
 }
 
+// ApplyRecommendation приводит набор конвертов к рекомендации по анкете одной транзакцией:
+//   - конверт с таким же названием переиспользуется, ему выставляется новая доля;
+//   - лишний конверт без остатка и без операций удаляется (например, стартовые демо-конверты);
+//   - лишний конверт с остатком или историей остаётся, но получает долю 0%;
+//   - недостающие конверты создаются в порядке приоритета.
+//
+// После применения доли всех конвертов в сумме дают 100%.
+func (p *Postgres) ApplyRecommendation(ctx context.Context, items []domain.RecommendedEnvelope) ([]domain.Envelope, error) {
+	if len(items) == 0 {
+		return nil, domain.ErrInvalidAllocation
+	}
+	total := 0
+	wanted := make(map[string]domain.RecommendedEnvelope, len(items))
+	for _, item := range items {
+		if item.AllocationPercent < 0 || item.AllocationPercent > 100 {
+			return nil, domain.ErrInvalidAllocation
+		}
+		if _, exists := wanted[item.Name]; exists {
+			return nil, domain.ErrInvalidAllocation
+		}
+		wanted[item.Name] = item
+		total += item.AllocationPercent
+	}
+	if total != 100 {
+		return nil, domain.ErrInvalidAllocation
+	}
+
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin apply recommendation: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	type existingEnvelope struct {
+		id         int64
+		name       string
+		balance    int64
+		hasHistory bool
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT e.id, e.name, e.balance_kopecks,
+		       EXISTS(SELECT 1 FROM transaction_allocations ta WHERE ta.envelope_id = e.id)
+		FROM envelopes e
+		ORDER BY e.id
+		FOR UPDATE OF e`)
+	if err != nil {
+		return nil, fmt.Errorf("load envelopes for recommendation: %w", err)
+	}
+	existing := make([]existingEnvelope, 0)
+	for rows.Next() {
+		var item existingEnvelope
+		if err := rows.Scan(&item.id, &item.name, &item.balance, &item.hasHistory); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan envelope for recommendation: %w", err)
+		}
+		existing = append(existing, item)
+	}
+	rowsErr := rows.Err()
+	rows.Close()
+	if rowsErr != nil {
+		return nil, fmt.Errorf("iterate envelopes for recommendation: %w", rowsErr)
+	}
+
+	reused := make(map[string]int64, len(items))
+	for _, item := range existing {
+		if _, isWanted := wanted[item.name]; isWanted {
+			if _, taken := reused[item.name]; !taken {
+				reused[item.name] = item.id
+				continue
+			}
+		}
+		if item.balance == 0 && !item.hasHistory {
+			if _, err := tx.Exec(ctx, `DELETE FROM envelopes WHERE id = $1`, item.id); err != nil {
+				return nil, fmt.Errorf("delete unused envelope: %w", err)
+			}
+			continue
+		}
+		if _, err := tx.Exec(ctx, `UPDATE envelopes SET allocation_percent = 0, updated_at = NOW() WHERE id = $1`, item.id); err != nil {
+			return nil, fmt.Errorf("reset envelope allocation: %w", err)
+		}
+	}
+
+	for _, item := range items {
+		if id, ok := reused[item.Name]; ok {
+			if _, err := tx.Exec(ctx, `UPDATE envelopes SET allocation_percent = $2, updated_at = NOW() WHERE id = $1`, id, item.AllocationPercent); err != nil {
+				return nil, fmt.Errorf("update recommended envelope: %w", err)
+			}
+			continue
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO envelopes (name, category, allocation_percent) VALUES ($1, $2, $3)`, item.Name, item.Category, item.AllocationPercent); err != nil {
+			return nil, fmt.Errorf("create recommended envelope: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit apply recommendation: %w", err)
+	}
+	return p.ListEnvelopes(ctx)
+}
+
 func (p *Postgres) CreateIncome(ctx context.Context, amountKopecks int64, description string) (domain.Transaction, error) {
 	if amountKopecks <= 0 {
 		return domain.Transaction{}, domain.ErrInvalidAmount
