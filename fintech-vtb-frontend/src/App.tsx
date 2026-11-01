@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo,useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   ArrowDownToLine,
   ArrowDownLeft,
   ArrowRight,
   ArrowUpFromLine,
   BadgeCheck,
-  Bell,
   Car,
   Check,
   ChevronRight,
@@ -13,7 +12,6 @@ import {
   Clock3,
   Eye,
   EyeOff,
-  ExternalLink,
   FileText,
   Gift,
   History as HistoryIcon,
@@ -44,6 +42,7 @@ import {
   updateEnvelope,
 } from './lib/api';
 import type { AllocationUpdate, Envelope, Transaction } from './lib/types';
+import { NotificationsMenu } from './notifications/NotificationsMenu';
 
 type Page = 'home' | 'envelopes' | 'history';
 type ModalState =
@@ -97,6 +96,7 @@ function App() {
   const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>('all');
   const [searchText, setSearchText] = useState('');
   const [historyHasMore, setHistoryHasMore] = useState(true);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -109,6 +109,7 @@ function App() {
       setEnvelopes(nextEnvelopes);
       setTransactions(transactionPage.data);
       setHistoryHasMore(transactionPage.data.length === transactionPage.pagination.limit);
+      setRefreshToken((value) => value + 1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Не удалось загрузить данные');
     } finally {
@@ -264,7 +265,7 @@ function App() {
               {useMock ? 'Демо-режим' : 'Реальный API'}
               <RefreshCw size={13} />
             </button>
-            <NotificationsMenu />
+            <NotificationsMenu useMock={useMock} refreshToken={refreshToken} onEnvelopesChanged={loadData} onToast={showToast} />
             <button className="profile-button" aria-label="Профиль"><span>Н</span></button>
           </div>
         </div>
@@ -460,55 +461,6 @@ function HomePage({
 function QuickAction({ icon, label, tone, onClick }: { icon: ReactNode; label: string; tone: string; onClick: () => void }) {
   return <button className="quick-action" onClick={onClick}><span className={`quick-action-icon tone-${tone}`}>{icon}</span><span>{label}</span></button>;
 }
-
-// Ссылка на Google-форму. Когда форма будет готова, вставь сюда адрес.
-const NOTIFICATIONS_FORM_URL = '';
-
-function NotificationsMenu() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  return (
-    <div className="notifications" ref={ref}>
-      <button className="notifications-button" onClick={() => setOpen((value) => !value)} aria-label="Уведомления" aria-expanded={open}>
-        <Bell size={19} />
-      </button>
-      {open && (
-        <div className="notifications-panel" role="dialog" aria-label="Уведомления">
-          <div className="notifications-title">Уведомления</div>
-          <p className="notifications-empty">Новых уведомлений пока нет</p>
-          {NOTIFICATIONS_FORM_URL ? (
-            <a className="notifications-link" href={NOTIFICATIONS_FORM_URL} target="_blank" rel="noreferrer">
-              Открыть форму <ExternalLink size={14} />
-            </a>
-          ) : (
-            <span className="notifications-link disabled">Здесь будет ссылка на форму</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-
-
 
 function EnvelopeCard({ envelope, index, onClick }: { envelope: Envelope; index: number; onClick: () => void }) {
   const color = `envelope-color-${index % 4}`;

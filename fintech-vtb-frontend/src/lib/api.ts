@@ -18,7 +18,7 @@ let demoTransactions: Transaction[] = [
   { id: 1, type: 'expense', amount_kopecks: 53000, description: 'Поездка по городу', created_at: new Date(initialTime - 2 * 86400000).toISOString(), allocations: [{ envelope_id: 2, envelope_name: 'Такси', amount_kopecks: 53000 }] },
 ];
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {

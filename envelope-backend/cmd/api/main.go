@@ -12,6 +12,7 @@ import (
 
 	"envelope-backend/internal/database"
 	"envelope-backend/internal/httpapi"
+	"envelope-backend/internal/notifications"
 	"envelope-backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -45,7 +46,16 @@ func main() {
 	}
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery(), corsMiddleware())
-	httpapi.NewHandler(repository.NewPostgres(pool)).RegisterRoutes(router)
+	repo := repository.NewPostgres(pool)
+	httpapi.NewHandler(repo).RegisterRoutes(router)
+
+	// Уведомления и анкета: общие методы репозитория + планировщик в фоне.
+	notificationService, err := notifications.NewService(repo, notifications.ConfigFromEnv())
+	if err != nil {
+		log.Fatalf("init notifications: %v", err)
+	}
+	notifications.NewHandler(notificationService).RegisterRoutes(router.Group("/api/v1"))
+	go notificationService.Run(ctx)
 
 	server := &http.Server{
 		Addr:              ":" + port,

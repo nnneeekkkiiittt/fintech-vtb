@@ -21,6 +21,9 @@ services:
       DATABASE_URL: postgres://postgres:postgres@db:5432/envelopes?sslmode=disable
       PORT: "8080"
       GIN_MODE: release
+      NOTIFICATIONS_DATA_DIR: /app/data/notifications
+    volumes:
+      - notifications_data:/app/data/notifications
     ports:
       - "8080:8080"
     depends_on:
@@ -29,3 +32,4 @@ services:
 
 volumes:
   postgres_data:
+  notifications_data:

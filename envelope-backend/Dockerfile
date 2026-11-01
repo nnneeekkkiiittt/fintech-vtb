@@ -8,6 +8,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/envelop
 FROM alpine:3.21
 RUN apk --no-cache add ca-certificates && adduser -D -H -u 10001 appuser
 WORKDIR /app
+# Каталог для JSON-файлов механизма уведомлений (история и состояние).
+RUN mkdir -p /app/data/notifications && chown -R appuser /app/data
 COPY --from=builder /out/envelope-api /app/envelope-api
 USER appuser
 EXPOSE 8080
