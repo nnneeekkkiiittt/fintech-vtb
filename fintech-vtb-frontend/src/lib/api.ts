@@ -1,13 +1,14 @@
-import type { AllocationUpdate, Envelope, Transaction, TransactionPage } from './types';
+import { buildRecommendation } from './recommendation';
+import type { AllocationUpdate, Answers, Envelope, RecommendedEnvelope, Transaction, TransactionPage } from './types';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 export const START_IN_DEMO_MODE = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 const initialTime = Date.now();
 let demoEnvelopes: Envelope[] = [
-  { id: 1, name: 'Рестораны', category: 'Еда вне дома', allocation_percent: 40, balance_kopecks: 725000, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
-  { id: 2, name: 'Такси', category: 'Транспорт', allocation_percent: 25, balance_kopecks: 240000, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
-  { id: 3, name: 'Продукты', category: 'Покупки', allocation_percent: 35, balance_kopecks: 560000, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
+  { id: 1, name: 'Рестораны', category: 'Еда вне дома', allocation_percent: 40, balance_kopecks: 725000,daily_balance: 0, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
+  { id: 2, name: 'Такси', category: 'Транспорт', allocation_percent: 25, balance_kopecks: 240000, daily_balance: 0, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
+  { id: 3, name: 'Продукты', category: 'Покупки', allocation_percent: 35, balance_kopecks: 560000, daily_balance: 0, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
 ];
 let nextEnvelopeId = 4;
 let nextTransactionId = 5;
@@ -77,7 +78,7 @@ export async function getTransactions(limit = 20, offset = 0, useMock = false): 
 export async function createEnvelope(name: string, category: string, useMock: boolean): Promise<Envelope> {
   if (useMock) {
     const now = new Date().toISOString();
-    const envelope: Envelope = { id: nextEnvelopeId++, name, category, allocation_percent: 0, balance_kopecks: 0, created_at: now, updated_at: now };
+    const envelope: Envelope = { id: nextEnvelopeId++, name, category, allocation_percent: 0, balance_kopecks: 0,daily_balance: 0, created_at: now, updated_at: now };
     demoEnvelopes = [...demoEnvelopes, envelope];
     return envelope;
   }
@@ -190,4 +191,50 @@ export async function createExpense(envelopeId: number, amountRubles: number, de
     method: 'POST',
     body: JSON.stringify({ envelope_id: envelopeId, amount_kopecks, description }),
   });
+}
+
+/** Только считает рекомендацию по анкете, ничего не сохраняет. */
+export async function getRecommendation(answers: Answers, useMock: boolean): Promise<RecommendedEnvelope[]> {
+  if (useMock) return buildRecommendation(answers);
+  const result = await request<{ data: RecommendedEnvelope[] }>('/api/v1/onboarding/recommendation', {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+  return result.data;
+}
+
+/**
+ * Применяет рекомендацию: создаёт недостающие конверты и выставляет доли.
+ * Лишние пустые конверты без операций удаляются, остальные получают долю 0%.
+ */
+export async function applyRecommendation(answers: Answers, useMock: boolean): Promise<Envelope[]> {
+  if (useMock) {
+    const items = buildRecommendation(answers);
+    const now = new Date().toISOString();
+    const hasHistory = (id: number) => demoTransactions.some((tx) => tx.allocations.some((allocation) => allocation.envelope_id === id));
+    const reused = new Set<string>();
+    const next: Envelope[] = [];
+    for (const envelope of demoEnvelopes) {
+      const wanted = items.find((item) => item.name === envelope.name);
+      if (wanted && !reused.has(envelope.name)) {
+        reused.add(envelope.name);
+        next.push({ ...envelope, allocation_percent: wanted.allocation_percent, updated_at: now });
+      } else if (envelope.balance_kopecks === 0 && !hasHistory(envelope.id)) {
+        continue;
+      } else {
+        next.push({ ...envelope, allocation_percent: 0, updated_at: now });
+      }
+    }
+    for (const item of items) {
+      if (reused.has(item.name)) continue;
+      next.push({ id: nextEnvelopeId++, name: item.name, category: item.category, allocation_percent: item.allocation_percent, balance_kopecks: 0, daily_balance: 0, created_at: now, updated_at: now });
+    }
+    demoEnvelopes = next;
+    return [...demoEnvelopes];
+  }
+  const result = await request<{ data: Envelope[] }>('/api/v1/onboarding/apply', {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+  return result.data;
 }

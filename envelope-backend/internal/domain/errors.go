@@ -10,4 +10,5 @@ var (
 	ErrEnvelopeHasBalance = errors.New("cannot delete an envelope with a non-zero balance")
 	ErrEnvelopeHasHistory = errors.New("cannot delete an envelope that has transaction history")
 	ErrAllocationNotZero  = errors.New("set the envelope allocation to 0 before deleting it")
+	ErrInvalidAnswers     = errors.New("questionnaire answers are incomplete or invalid")
 )

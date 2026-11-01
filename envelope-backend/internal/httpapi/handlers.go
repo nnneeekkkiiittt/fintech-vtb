@@ -36,6 +36,9 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		api.DELETE("/envelopes/:id", h.deleteEnvelope)
 		api.PUT("/allocations", h.setAllocations)
 
+		api.POST("/onboarding/recommendation", h.recommendEnvelopes)
+		api.POST("/onboarding/apply", h.applyRecommendation)
+
 		api.POST("/transactions/income", h.createIncome)
 		api.POST("/transactions/expense", h.createExpense)
 		api.GET("/transactions", h.listTransactions)
@@ -161,6 +164,45 @@ func (h *Handler) setAllocations(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": items})
 }
 
+type onboardingRequest struct {
+	// Answers: номер вопроса (с 1) -> номера выбранных вариантов (с 1).
+	Answers domain.Answers `json:"answers" binding:"required"`
+}
+
+// recommendEnvelopes только считает рекомендацию по анкете и ничего не сохраняет.
+func (h *Handler) recommendEnvelopes(c *gin.Context) {
+	var req onboardingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_request", "Передайте объект answers: номер вопроса -> список выбранных вариантов")
+		return
+	}
+	if err := domain.ValidateAnswers(req.Answers); err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": domain.BuildRecommendation(req.Answers)})
+}
+
+// applyRecommendation пересчитывает рекомендацию на сервере и применяет её:
+// создаёт недостающие конверты и выставляет доли распределения.
+func (h *Handler) applyRecommendation(c *gin.Context) {
+	var req onboardingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_request", "Передайте объект answers: номер вопроса -> список выбранных вариантов")
+		return
+	}
+	if err := domain.ValidateAnswers(req.Answers); err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	items, err := h.repo.ApplyRecommendation(c.Request.Context(), domain.BuildRecommendation(req.Answers))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": items})
+}
+
 type incomeRequest struct {
 	AmountKopecks int64  `json:"amount_kopecks" binding:"required,gt=0"`
 	Description   string `json:"description" binding:"max=200"`
@@ -257,6 +299,8 @@ func writeDomainError(c *gin.Context, err error) {
 		writeError(c, http.StatusBadRequest, "invalid_amount", "Сумма должна быть положительной")
 	case errors.Is(err, domain.ErrInvalidAllocation):
 		writeError(c, http.StatusBadRequest, "invalid_allocation", "Проценты должны в сумме давать 100%, каждый конверт нужно передать ровно один раз")
+	case errors.Is(err, domain.ErrInvalidAnswers):
+		writeError(c, http.StatusBadRequest, "invalid_answers", "Ответьте на все вопросы анкеты: в вопросах с одним ответом выберите один вариант")
 	case errors.Is(err, domain.ErrInsufficientFunds):
 		writeError(c, http.StatusConflict, "insufficient_funds", "В конверте недостаточно денег")
 	case errors.Is(err, domain.ErrEnvelopeHasBalance):

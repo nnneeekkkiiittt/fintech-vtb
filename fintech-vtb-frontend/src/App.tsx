@@ -9,6 +9,7 @@ import {
   Check,
   ChevronRight,
   CircleHelp,
+  ClipboardList,
   Clock3,
   Eye,
   EyeOff,
@@ -41,6 +42,7 @@ import {
   START_IN_DEMO_MODE,
   updateEnvelope,
 } from './lib/api';
+import { QuestionnaireFlow } from './Questionnaire';
 import type { AllocationUpdate, Envelope, Transaction } from './lib/types';
 
 type Page = 'home' | 'envelopes' | 'history';
@@ -48,6 +50,7 @@ type ModalState =
   | { kind: 'income' }
   | { kind: 'expense'; envelopeId?: number }
   | { kind: 'create-envelope' }
+  | { kind: 'questionnaire' }
   | { kind: 'edit-envelope'; envelope: Envelope };
 type TransactionFilter = 'all' | 'income' | 'expense';
 
@@ -298,6 +301,7 @@ function App() {
                 onIncome={() => setModal({ kind: 'income' })}
                 onExpense={() => setModal({ kind: 'expense' })}
                 onCreate={() => setModal({ kind: 'create-envelope' })}
+                onQuestionnaire={() => setModal({ kind: 'questionnaire' })}
                 onAllocations={() => { setPage('envelopes'); setAllocationsOpen(true); }}
                 onAllEnvelopes={() => setPage('envelopes')}
                 onAllTransactions={() => setPage('history')}
@@ -358,6 +362,13 @@ function App() {
               onSubmit={handleTransactionSubmit}
             />
           )}
+          {modal.kind === 'questionnaire' && (
+            <QuestionnaireFlow
+              useMock={useMock}
+              onClose={() => setModal(null)}
+              onApplied={async (message) => { setModal(null); await reloadAndNotify(message); }}
+            />
+          )}
           {(modal.kind === 'create-envelope' || modal.kind === 'edit-envelope') && (
             <EnvelopeForm
               editing={modal.kind === 'edit-envelope' ? modal.envelope : undefined}
@@ -388,7 +399,7 @@ function BottomNavigation({ page, onNavigate }: { page: Page; onNavigate: (page:
 }
 
 function HomePage({
-  envelopes, transactions, totalKopecks, balanceVisible, onToggleBalance, onIncome, onExpense, onCreate, onAllocations, onAllEnvelopes, onAllTransactions, onSelectEnvelope,
+  envelopes, transactions, totalKopecks, balanceVisible, onToggleBalance, onIncome, onExpense, onCreate, onQuestionnaire, onAllocations, onAllEnvelopes, onAllTransactions, onSelectEnvelope,
 }: {
   envelopes: Envelope[];
   transactions: Transaction[];
@@ -398,6 +409,7 @@ function HomePage({
   onIncome: () => void;
   onExpense: () => void;
   onCreate: () => void;
+  onQuestionnaire: () => void;
   onAllocations: () => void;
   onAllEnvelopes: () => void;
   onAllTransactions: () => void;
@@ -419,6 +431,12 @@ function HomePage({
         <QuickAction icon={<ArrowUpFromLine size={22} />} label="Потратить" tone="purple" onClick={onExpense} />
         <QuickAction icon={<Plus size={23} />} label="Новый конверт" tone="mint" onClick={onCreate} />
         <QuickAction icon={<SlidersHorizontal size={22} />} label="Распределение" tone="orange" onClick={onAllocations} />
+      </section>
+
+      <section className="questionnaire-banner" aria-label="Подбор конвертов">
+        <span className="questionnaire-banner-icon"><ClipboardList size={22} /></span>
+        <div><strong>Подберём конверты под вас</strong><p>15 коротких вопросов, и мы предложим категории и доли распределения.</p></div>
+        <button className="button button-primary" onClick={onQuestionnaire}>Пройти анкету <ArrowRight size={16} /></button>
       </section>
 
       <section className="section-block">
@@ -463,20 +481,7 @@ function QuickAction({ icon, label, tone, onClick }: { icon: ReactNode; label: s
 
 
 
-// Временные значения, пока нет формулы
-const TEMP_METRICS: Record<number, number> = { 1: 667, 2: 668, 3: 669 };
 
-function calcEnvelopeMetric(envelope: Envelope): number {
-  // TODO: заменить на формулу
-  return TEMP_METRICS[envelope.id] ?? 0;
-}
-/*
-function calcEnvelopeMetric(envelope: Envelope): number {
-  return envelope.allocation_percent * 2;   // пример
-}
-
- ####### КОГДА ПРИДЕТ ФОРМУЛА########
-*/
 
 function EnvelopeCard({ envelope, index, onClick }: { envelope: Envelope; index: number; onClick: () => void }) {
   const color = `envelope-color-${index % 4}`;
@@ -486,7 +491,7 @@ function EnvelopeCard({ envelope, index, onClick }: { envelope: Envelope; index:
       <span className="envelope-name">{envelope.name}</span><span className="envelope-category">{envelope.category}</span>
       <div className="envelope-amount-row">
         <strong className="envelope-amount">{money(rubles(envelope.balance_kopecks))}</strong>
-        <span className="envelope-extra">{calcEnvelopeMetric(envelope)}</span>
+        <span className="envelope-extra">{money(rubles(envelope.daily_balance))}</span>
       </div>
       <div className="envelope-card-foot"><span>Баланс конверта</span><ChevronRight size={16} /></div>
     </button>
