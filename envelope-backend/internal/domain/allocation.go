@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"math/rand"
 	"sort"
 )
 
@@ -64,4 +65,8 @@ func SplitIncome(amountKopecks int64, envelopes []Envelope) ([]IncomeShare, erro
 	}
 
 	return shares, nil
+}
+
+func CalculateDailyBalance(envelope Envelope) (int64, error) {
+	return rand.Int63n(envelope.BalanceKopecks), nil
 }

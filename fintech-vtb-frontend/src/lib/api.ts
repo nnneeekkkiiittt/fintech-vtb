@@ -5,9 +5,9 @@ export const START_IN_DEMO_MODE = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 const initialTime = Date.now();
 let demoEnvelopes: Envelope[] = [
-  { id: 1, name: 'Рестораны', category: 'Еда вне дома', allocation_percent: 40, balance_kopecks: 725000, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
-  { id: 2, name: 'Такси', category: 'Транспорт', allocation_percent: 25, balance_kopecks: 240000, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
-  { id: 3, name: 'Продукты', category: 'Покупки', allocation_percent: 35, balance_kopecks: 560000, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
+  { id: 1, name: 'Рестораны', category: 'Еда вне дома', allocation_percent: 40, balance_kopecks: 725000,daily_balance: 0, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
+  { id: 2, name: 'Такси', category: 'Транспорт', allocation_percent: 25, balance_kopecks: 240000, daily_balance: 0, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
+  { id: 3, name: 'Продукты', category: 'Покупки', allocation_percent: 35, balance_kopecks: 560000, daily_balance: 0, created_at: new Date(initialTime - 30 * 86400000).toISOString(), updated_at: new Date().toISOString() },
 ];
 let nextEnvelopeId = 4;
 let nextTransactionId = 5;
@@ -77,7 +77,7 @@ export async function getTransactions(limit = 20, offset = 0, useMock = false): 
 export async function createEnvelope(name: string, category: string, useMock: boolean): Promise<Envelope> {
   if (useMock) {
     const now = new Date().toISOString();
-    const envelope: Envelope = { id: nextEnvelopeId++, name, category, allocation_percent: 0, balance_kopecks: 0, created_at: now, updated_at: now };
+    const envelope: Envelope = { id: nextEnvelopeId++, name, category, allocation_percent: 0, balance_kopecks: 0,daily_balance: 0, created_at: now, updated_at: now };
     demoEnvelopes = [...demoEnvelopes, envelope];
     return envelope;
   }

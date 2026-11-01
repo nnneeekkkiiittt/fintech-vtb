@@ -404,6 +404,7 @@ function HomePage({
   onSelectEnvelope: (envelope: Envelope) => void;
 }) {
   const percentSum = envelopes.reduce((sum, item) => sum + item.allocation_percent, 0);
+
   return (
     <div className="home-layout">
       <section className="balance-card">
@@ -457,13 +458,23 @@ function QuickAction({ icon, label, tone, onClick }: { icon: ReactNode; label: s
   return <button className="quick-action" onClick={onClick}><span className={`quick-action-icon tone-${tone}`}>{icon}</span><span>{label}</span></button>;
 }
 
+// Число в правом нижнем углу карточки конверта.
+// Сейчас постоянное значение, позже здесь будет формула.
+
+
+
+
+
 function EnvelopeCard({ envelope, index, onClick }: { envelope: Envelope; index: number; onClick: () => void }) {
   const color = `envelope-color-${index % 4}`;
   return (
     <button className="envelope-card" onClick={onClick}>
       <div className="envelope-card-top"><span className={`envelope-icon-box ${color}`}>{envelopeIcon(envelope)}</span><span className="allocation-pill">{envelope.allocation_percent}% <span>доля</span></span></div>
       <span className="envelope-name">{envelope.name}</span><span className="envelope-category">{envelope.category}</span>
-      <strong className="envelope-amount">{money(rubles(envelope.balance_kopecks))}</strong>
+      <div className="envelope-amount-row">
+        <strong className="envelope-amount">{money(rubles(envelope.balance_kopecks))}</strong>
+        <span className="envelope-extra">{money(rubles(envelope.daily_balance))}</span>
+      </div>
       <div className="envelope-card-foot"><span>Баланс конверта</span><ChevronRight size={16} /></div>
     </button>
   );

@@ -4,6 +4,7 @@ export type Envelope = {
   category: string;
   allocation_percent: number;
   balance_kopecks: number;
+  daily_balance: number;
   created_at: string;
   updated_at: string;
 };
@@ -34,3 +35,5 @@ export type TransactionPage = {
   data: Transaction[];
   pagination: { limit: number; offset: number };
 };
+
+

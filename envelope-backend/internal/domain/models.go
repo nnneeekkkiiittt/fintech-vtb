@@ -11,6 +11,7 @@ type Envelope struct {
 	BalanceKopecks    int64     `json:"balance_kopecks"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	DailyBalance      int64     `json:"daily_balance"`
 }
 
 type TransactionType string

@@ -65,12 +65,21 @@ func (h *Handler) getEnvelope(c *gin.Context) {
 	if !ok {
 		return
 	}
-	item, err := h.repo.GetEnvelope(c.Request.Context(), id)
+	response, err := h.repo.GetEnvelope(c.Request.Context(), id)
 	if err != nil {
 		writeDomainError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": item})
+
+	dailyBalance, err := domain.CalculateDailyBalance(response)
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+
+	response.DailyBalance = dailyBalance
+
+	c.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 type envelopeRequest struct {
